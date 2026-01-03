@@ -1,16 +1,16 @@
 # RK-ADELS (3D-CLP) — Full runnable project (Python)
 
-Bu paket, 3D Container Loading Problem (3D-CLP) için:
-- Instance üretimi (otomatik)
-- 3D wall–heightmap decoder
-- Ablation: H0 (decoder-only), A1 (RK-DE), A2 (RK-ADE), A3 (RK-ADELS + Local Search)
-- Sonuç CSV’leri + grafik üretimi
+This package is a benchmark-oriented prototype for the **3D Container Loading Problem (3D-CLP)**, including:
+- **Automatic instance generation**
+- **3D wall–heightmap decoder**
+- **Ablation study**: H0 (decoder-only), A1 (RK-DE), A2 (RK-ADE), A3 (RK-ADELS + Local Search)
+- **Result CSVs + plot generation**
 
-> Not: Bu akademik/benchmark amaçlı bir prototiptir. Decoder “budget-oriented” ve hızlı değerlendirme hedeflidir.
+> Note: This is an academic/benchmark prototype. The decoder is **budget-oriented** and designed for **fast evaluation**.
 
 ---
 
-## 1) Kurulum
+## 1) Setup
 
 ### Windows
 ```bash
@@ -28,31 +28,31 @@ pip install -r requirements.txt
 
 ---
 
-## 2) Instance üret (otomatik)
+## 2) Generate instances (automatic)
 
 ```bash
 PYTHONPATH=. python -m scripts.generate_instances   --out_dir data/instances   --n_instances 10   --n_items 100   --fill_ratio 1.20   --W 100 --H 100 --D 100   --seed 42
 ```
 
-Çıktı: `data/instances/syn_000.json`, `syn_001.json`, ...
+Outputs: `data/instances/syn_000.json`, `syn_001.json`, ...
 
 ---
 
-## 3) Ablation + sonuç + grafik (tek komut)
+## 3) Ablation + results + plots (single command)
 
 ```bash
 PYTHONPATH=. python -m scripts.run_ablation   --instances_dir data/instances   --out_dir outputs/run1   --trials 10   --seconds 30   --NP 50   --seed 123
 ```
 
-Çıktılar:
-- `outputs/run1/runs.csv` (tüm koşular, seed bazında)
-- `outputs/run1/summary.csv` (instance × variant özet)
+Outputs:
+- `outputs/run1/runs.csv` (all runs, per seed)
+- `outputs/run1/summary.csv` (instance × variant summary)
 - `outputs/run1/fig_utilization_bars.png`
 - `outputs/run1/fig_runtime_scatter.png`
 
 ---
 
-## 4) Sadece grafik üretmek istersen
+## 4) If you only want to generate plots
 
 ```bash
 PYTHONPATH=. python -m scripts.plot_results   --runs_csv outputs/run1/runs.csv   --summary_csv outputs/run1/summary.csv   --out_dir outputs/run1
@@ -60,23 +60,21 @@ PYTHONPATH=. python -m scripts.plot_results   --runs_csv outputs/run1/runs.csv  
 
 ---
 
-## 4.5) Tek komutla her şey (sentetik instance + koşu + grafik)
+## 4.5) One-command end-to-end (synthetic instances + runs + plots)
 
 ### Linux/macOS
-
 ```bash
 bash scripts/run_all.sh
 ```
 
 ### Windows (PowerShell)
-
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\run_all.ps1
 ```
 
-Bu script şunları yapar: (1) **sentetik instance üretir**, (2) **H0/A1/A2/A3 + RS/PSO/GA/SA** çalıştırır, (3) **CSV + grafik** üretir.
+This script performs: (1) **synthetic instance generation**, (2) runs **H0/A1/A2/A3 + RS/PSO/GA/SA**, (3) produces **CSVs + plots**.
 
-İsterseniz makale tablosu için LaTeX çıktısı:
+If you also want **LaTeX outputs** for paper tables:
 
 ```bash
 PYTHONPATH=. python -m scripts.make_latex_tables --in_dir outputs/run1 --out_dir outputs/run1
@@ -84,41 +82,41 @@ PYTHONPATH=. python -m scripts.make_latex_tables --in_dir outputs/run1 --out_dir
 
 ---
 
-## Parametre önerisi (makale şablonuna uygun)
-- `seconds`: 30 / 60 / 120 (matched-budget)
-- `trials`: 10 veya 20
-- `NP`: 50 veya 100
+## Recommended parameters (aligned with paper template)
+- `seconds`: 30 / 60 / 120 (**matched-budget**)
+- `trials`: 10 or 20
+- `NP`: 50 or 100
 
 ---
 
-## Klasör yapısı
-- `rk_adels/` : çekirdek algoritmalar
-- `scripts/`  : CLI komutları
-- `data/instances/` : JSON instance dosyaları
-- `outputs/` : CSV + grafikler
+## Folder structure
+- `rk_adels/` : core algorithms
+- `scripts/`  : CLI commands
+- `data/instances/` : JSON instance files
+- `outputs/` : CSVs + plots
 
-İyi çalışmalar!
+Good luck!
 
 ---
 
-## 5) Diğer algoritmalarla karşılaştırma (RS / GA / SA)
+## 5) Comparison with other algorithms (RS / GA / SA)
 
-Bu projede “dış” algoritma karşılaştırmasını iki şekilde yapabilirsiniz:
+In this project, “external” algorithm comparisons can be done in two ways:
 
-1) **Aynı decoder ile matched-budget karşılaştırma (önerilen):**
-   Tüm yöntemler aynı wall–heightmap decoder’ı kullanır. Böylece fark, sadece “dış arama” (DE/GA/SA/RS) kaynaklı olur.
+1) **Matched-budget comparison using the same decoder (recommended):**  
+   All methods share the same wall–heightmap decoder. This ensures differences come only from the **outer search** (DE/GA/SA/RS), making the comparison fair.
 
-2) **Literatürdeki tam yöntemlerle karşılaştırma (zor):**
-   Her makalenin kendi decoder/yan kısıtları vardır. Birebir adil karşılaştırma için o kodların yeniden uygulanması veya resmi kodların kullanılması gerekir.
+2) **Comparison against full methods from the literature (hard):**  
+   Each paper typically uses its own decoder and constraints. A truly fair comparison requires re-implementing those methods or using official code.
 
-Bu pakette 1) için ek baselines hazır:
-- `RS` : Random Search (aynı random-key uzayında)
-- `PSO`: Random-Key Particle Swarm Optimization (PSO)
+This package includes baselines for approach (1):
+- `RS` : Random Search (in the same random-key space)
+- `PSO`: Random-Key Particle Swarm Optimization
 - `GA` : Random-Key Genetic Algorithm
-- `SA` : Permütasyon+oryantasyon üzerinde Simulated Annealing
+- `SA` : Simulated Annealing on permutation + orientations
 
-### Komut
-Ablation komutunu `--variants` ile genişletebilirsiniz:
+### Command
+You can extend ablation by using `--variants`:
 
 ```bash
 PYTHONPATH=. python -m scripts.run_ablation \
@@ -131,17 +129,15 @@ PYTHONPATH=. python -m scripts.run_ablation \
   --variants H0,A1,A2,A3,RS,PSO,GA,SA
 ```
 
-> Not: `GA` popülasyon tabanlı olduğu için `--NP` kullanır. `RS` ve `SA` için `--NP` yok sayılır.
-
-
+> Note: `GA` is population-based, so it uses `--NP`. For `RS` and `SA`, `--NP` is ignored.
 
 ---
 
-## 5) OR-Library (Bischoff–Ratcliff / thpack) veri setlerini içe aktarma
+## 5) Importing OR-Library datasets (Bischoff–Ratcliff / thpack)
 
-1) OR-Library’den `thpack1` ... `thpack7` dosyalarını indir (Bischoff–Ratcliff 1995 test setleri).
-2) Dosyaları örn. `data/orlib/` altına koy.
-3) JSON instance formatına çevir:
+1) Download `thpack1` ... `thpack7` from OR-Library (Bischoff–Ratcliff 1995 test sets).
+2) Place them under `data/orlib/` (for example).
+3) Convert them into the project’s JSON instance format:
 
 ### Windows (PowerShell)
 ```powershell
@@ -159,7 +155,7 @@ PYTHONPATH=. python -m scripts.import_orlib_thpack \
   --manifest
 ```
 
-Sonra direkt ablation/benchmark:
+Then run the ablation/benchmark directly:
 ```bash
 PYTHONPATH=. python -m scripts.run_ablation \
   --instances_dir data/instances_orlib \
@@ -167,4 +163,4 @@ PYTHONPATH=. python -m scripts.run_ablation \
   --trials 10 --seconds 30 --NP 50 --seed 123
 ```
 
-> Not: OR-Library formatındaki “0/1” işaretleri (bir boyutun dikey yerleşime izin verip vermediği) desteklenir.
+> Note: The OR-Library “0/1” flags (whether a dimension allows vertical placement) are supported.
