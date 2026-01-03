@@ -1,84 +1,170 @@
-# RK-ADELS for 3D Container Loading (3D-CLP) — Full Reproducible Project
+# RK-ADELS (3D-CLP) — Full runnable project (Python)
 
-This repository contains a **complete, runnable** implementation of the manuscript draft:
-**“Solving the Three-Dimensional Container Loading Problem with Random-Key Adaptive Differential Evolution and Local Search”**
-(double-anonymized).
+Bu paket, 3D Container Loading Problem (3D-CLP) için:
+- Instance üretimi (otomatik)
+- 3D wall–heightmap decoder
+- Ablation: H0 (decoder-only), A1 (RK-DE), A2 (RK-ADE), A3 (RK-ADELS + Local Search)
+- Sonuç CSV’leri + grafik üretimi
 
-It includes:
-- A 3D **wall–heightmap** decoder with **dynamic breakpoints** (coordinate-compressed envelope grid)
-- Random-key encoding (order + orientation keys), faithful DE operators
-- Matched-budget variants: **H0**, **A1**, **A2**, **A3 (= RK-ADELS)**
-- Batch experiment runner that writes **CSV summaries**
-- Python scripts to generate **tables and plots** (PNG) from results
-
-> Public benchmark instance files are not bundled. Drop your instance JSON files into `data/instances/`
-> using the provided schema (see `data/examples/inst_example.json`).
+> Not: Bu akademik/benchmark amaçlı bir prototiptir. Decoder “budget-oriented” ve hızlı değerlendirme hedeflidir.
 
 ---
 
-## 1) Build
-Requires **.NET 8 SDK**.
+## 1) Kurulum
 
+### Windows
 ```bash
-cd src/RKAdels3D
-dotnet build -c Release
-```
-
-## 2) Run a single instance
-```bash
-dotnet run -c Release -- \
-  --instance ../../data/examples/inst_example.json \
-  --variant A3 \
-  --seed 42 \
-  --timeLimitSec 5 \
-  --np 60
-```
-
-Variants:
-- `H0`: decoder-only (random sampling + volume-descending)
-- `A1`: RK-DE (DE/rand/1 fixed F/CR, no adaptation, no local search)
-- `A2`: RK-ADE (current-to-pbest + self-adaptive F/CR, no local search)
-- `A3`: RK-ADELS (A2 + local search)
-
-## 3) Batch experiments
-Put instance files in `data/instances/` (each `*.json`), then run:
-
-```bash
-dotnet run -c Release -- \
-  --batch ../../data/instances \
-  --out ../../results \
-  --variant A3 \
-  --trials 10 \
-  --timeLimitSec 30 \
-  --np 80 \
-  --seed 1337
-```
-
-Outputs:
-- `results/per_run.csv` (one row per trial)
-- `results/summary.csv` (mean±std, best, etc.)
-
-## 4) Plots and tables (Python)
-Requires Python 3.10+.
-
-```bash
-cd scripts
+python -m venv venv
+venv\Scripts\activate
 pip install -r requirements.txt
-python plot_results.py --summary ../results/summary.csv --out ../results/figures
+```
+
+### Linux / macOS
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
 ---
 
-## Instance JSON schema
-See `data/examples/inst_example.json`:
-- container: W,H,D
-- items: list of {id, w,h,d, qty(optional)}
+## 2) Instance üret (otomatik)
 
-If `qty` is provided, the loader expands items.
+```bash
+PYTHONPATH=. python -m scripts.generate_instances   --out_dir data/instances   --n_instances 10   --n_items 100   --fill_ratio 1.20   --W 100 --H 100 --D 100   --seed 42
+```
+
+Çıktı: `data/instances/syn_000.json`, `syn_001.json`, ...
 
 ---
 
-## Reproducibility
-- All trials use explicit seeds (base seed + trial index)
-- CSV outputs include machine/time parameters you provide
-- The solver is time-budgeted using `Stopwatch`
+## 3) Ablation + sonuç + grafik (tek komut)
+
+```bash
+PYTHONPATH=. python -m scripts.run_ablation   --instances_dir data/instances   --out_dir outputs/run1   --trials 10   --seconds 30   --NP 50   --seed 123
+```
+
+Çıktılar:
+- `outputs/run1/runs.csv` (tüm koşular, seed bazında)
+- `outputs/run1/summary.csv` (instance × variant özet)
+- `outputs/run1/fig_utilization_bars.png`
+- `outputs/run1/fig_runtime_scatter.png`
+
+---
+
+## 4) Sadece grafik üretmek istersen
+
+```bash
+PYTHONPATH=. python -m scripts.plot_results   --runs_csv outputs/run1/runs.csv   --summary_csv outputs/run1/summary.csv   --out_dir outputs/run1
+```
+
+---
+
+## 4.5) Tek komutla her şey (sentetik instance + koşu + grafik)
+
+### Linux/macOS
+
+```bash
+bash scripts/run_all.sh
+```
+
+### Windows (PowerShell)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_all.ps1
+```
+
+Bu script şunları yapar: (1) **sentetik instance üretir**, (2) **H0/A1/A2/A3 + RS/PSO/GA/SA** çalıştırır, (3) **CSV + grafik** üretir.
+
+İsterseniz makale tablosu için LaTeX çıktısı:
+
+```bash
+PYTHONPATH=. python -m scripts.make_latex_tables --in_dir outputs/run1 --out_dir outputs/run1
+```
+
+---
+
+## Parametre önerisi (makale şablonuna uygun)
+- `seconds`: 30 / 60 / 120 (matched-budget)
+- `trials`: 10 veya 20
+- `NP`: 50 veya 100
+
+---
+
+## Klasör yapısı
+- `rk_adels/` : çekirdek algoritmalar
+- `scripts/`  : CLI komutları
+- `data/instances/` : JSON instance dosyaları
+- `outputs/` : CSV + grafikler
+
+İyi çalışmalar!
+
+---
+
+## 5) Diğer algoritmalarla karşılaştırma (RS / GA / SA)
+
+Bu projede “dış” algoritma karşılaştırmasını iki şekilde yapabilirsiniz:
+
+1) **Aynı decoder ile matched-budget karşılaştırma (önerilen):**
+   Tüm yöntemler aynı wall–heightmap decoder’ı kullanır. Böylece fark, sadece “dış arama” (DE/GA/SA/RS) kaynaklı olur.
+
+2) **Literatürdeki tam yöntemlerle karşılaştırma (zor):**
+   Her makalenin kendi decoder/yan kısıtları vardır. Birebir adil karşılaştırma için o kodların yeniden uygulanması veya resmi kodların kullanılması gerekir.
+
+Bu pakette 1) için ek baselines hazır:
+- `RS` : Random Search (aynı random-key uzayında)
+- `PSO`: Random-Key Particle Swarm Optimization (PSO)
+- `GA` : Random-Key Genetic Algorithm
+- `SA` : Permütasyon+oryantasyon üzerinde Simulated Annealing
+
+### Komut
+Ablation komutunu `--variants` ile genişletebilirsiniz:
+
+```bash
+PYTHONPATH=. python -m scripts.run_ablation \
+  --instances_dir data/instances \
+  --out_dir outputs/compare1 \
+  --trials 10 \
+  --seconds 30 \
+  --NP 50 \
+  --seed 123 \
+  --variants H0,A1,A2,A3,RS,PSO,GA,SA
+```
+
+> Not: `GA` popülasyon tabanlı olduğu için `--NP` kullanır. `RS` ve `SA` için `--NP` yok sayılır.
+
+
+
+---
+
+## 5) OR-Library (Bischoff–Ratcliff / thpack) veri setlerini içe aktarma
+
+1) OR-Library’den `thpack1` ... `thpack7` dosyalarını indir (Bischoff–Ratcliff 1995 test setleri).
+2) Dosyaları örn. `data/orlib/` altına koy.
+3) JSON instance formatına çevir:
+
+### Windows (PowerShell)
+```powershell
+PYTHONPATH=. python -m scripts.import_orlib_thpack `
+  --thpack data/orlib/thpack1.txt data/orlib/thpack2.txt `
+  --out_dir data/instances_orlib `
+  --manifest
+```
+
+### Linux / macOS
+```bash
+PYTHONPATH=. python -m scripts.import_orlib_thpack \
+  --thpack data/orlib/thpack1.txt data/orlib/thpack2.txt \
+  --out_dir data/instances_orlib \
+  --manifest
+```
+
+Sonra direkt ablation/benchmark:
+```bash
+PYTHONPATH=. python -m scripts.run_ablation \
+  --instances_dir data/instances_orlib \
+  --out_dir outputs/orlib_run1 \
+  --trials 10 --seconds 30 --NP 50 --seed 123
+```
+
+> Not: OR-Library formatındaki “0/1” işaretleri (bir boyutun dikey yerleşime izin verip vermediği) desteklenir.
